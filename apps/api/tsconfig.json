@@ -1,0 +1,9 @@
+{
+  "extends": "@receivables/tsconfig/nest.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "baseUrl": "./"
+  },
+  "include": ["src/**/*"]
+}

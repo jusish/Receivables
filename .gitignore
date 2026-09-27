@@ -1,0 +1,68 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Diagnostic reports
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Dependency directories
+node_modules/
+.pnpm-store/
+
+# Build artifacts
+dist/
+build/
+.next/
+out/
+storybook-static/
+*.tsbuildinfo
+
+# Cache directories
+.cache/
+.turbo/
+.eslintcache
+
+# Environment variables
+.env
+.env*.local
+!.env.example
+!.env.test
+
+# IDE & OS
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Testing coverage
+coverage/
+.nyc_output/
+
+# Prisma generated artifacts
+apps/api/prisma/client/
+prisma/client/
+
+# MinIO / Docker local data
+.docker-data/
+docker-data/
+minio-data/
+postgres-data/
+redis-data/

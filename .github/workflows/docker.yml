@@ -1,0 +1,68 @@
+name: Docker Build & GHCR Publish
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  docker:
+    name: Build & Push Docker Images
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract short SHA
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      # 1. API Image
+      - name: Build and push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/receivables-api:latest
+            ghcr.io/${{ github.repository_owner }}/receivables-api:sha-${{ steps.vars.outputs.sha_short }}
+            ghcr.io/${{ github.repository_owner }}/receivables-api:${{ github.sha }}
+
+      # 2. Web Image
+      - name: Build and push Web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/receivables-web:latest
+            ghcr.io/${{ github.repository_owner }}/receivables-web:sha-${{ steps.vars.outputs.sha_short }}
+            ghcr.io/${{ github.repository_owner }}/receivables-web:${{ github.sha }}
+
+      # 3. Admin Image
+      - name: Build and push Admin image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/admin/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/receivables-admin:latest
+            ghcr.io/${{ github.repository_owner }}/receivables-admin:sha-${{ steps.vars.outputs.sha_short }}
+            ghcr.io/${{ github.repository_owner }}/receivables-admin:${{ github.sha }}

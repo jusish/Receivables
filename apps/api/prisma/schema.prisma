@@ -1,0 +1,556 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ==============================================================================
+// Enums
+// ==============================================================================
+
+enum UserRole {
+  BUSINESS_OWNER
+  MANAGER
+  ACCOUNTANT
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  SYSTEM_ADMIN
+  SUPPORT_AGENT
+  READ_ONLY_ADMIN
+}
+
+enum BusinessStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum MembershipStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+}
+
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum ReceivableStatus {
+  DRAFT
+  PENDING_ACTIVATION
+  ACTIVE
+  PARTIALLY_PAID
+  PAID
+  CANCELLED
+  WRITTEN_OFF
+}
+
+enum ReceivableSourceType {
+  MANUAL
+  DELIVERY
+  INVOICE
+  SALES_ORDER
+  IMPORT
+  API
+  INTEGRATION
+  OTHER
+}
+
+enum AdjustmentType {
+  CREDIT
+  DEBIT
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  MOBILE_MONEY
+  CHEQUE
+  OTHER
+}
+
+enum PaymentStatus {
+  COMPLETED
+  REVERSED
+}
+
+enum CollectionActivityType {
+  PHONE_CALL
+  IN_PERSON
+  SMS
+  WHATSAPP
+  EMAIL
+  LETTER
+  OTHER
+}
+
+enum CollectionOutcome {
+  NO_ANSWER
+  PROMISED_TO_PAY
+  PAYMENT_MADE
+  DISPUTED
+  WRONG_NUMBER
+  CUSTOMER_UNAVAILABLE
+  REFUSED
+  FOLLOW_UP_LATER
+  OTHER
+}
+
+enum FollowUpStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+// ==============================================================================
+// Identity & Tenancy
+// ==============================================================================
+
+model User {
+  id           String     @id @default(uuid())
+  phone        String     @unique
+  passwordHash String
+  fullName     String
+  isActive     Boolean    @default(true)
+  adminRole    AdminRole?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  memberships           BusinessMembership[]
+  createdReceivables    Receivable[]          @relation("ReceivableCreatedBy")
+  cancelledReceivables  Receivable[]          @relation("ReceivableCancelledBy")
+  createdAdjustments    ReceivableAdjustment[] @relation("AdjustmentCreatedBy")
+  approvedAdjustments   ReceivableAdjustment[] @relation("AdjustmentApprovedBy")
+  recordedPayments      Payment[]             @relation("PaymentCreatedBy")
+  paymentAllocations    PaymentAllocation[]   @relation("AllocationCreatedBy")
+  collectionActivities  CollectionActivity[]  @relation("CollectionActivityCreatedBy")
+  createdInvitations    Invitation[]          @relation("InvitationCreatedBy")
+  notifications         Notification[]
+  auditEvents           AuditEvent[]
+
+  @@index([phone])
+}
+
+model Business {
+  id        String         @id @default(uuid())
+  name      String
+  code      String         @unique
+  currency  String         @default("RWF")
+  timezone  String         @default("Africa/Kigali")
+  locale    String         @default("en-RW")
+  status    BusinessStatus @default(ACTIVE)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  memberships          BusinessMembership[]
+  customers            Customer[]
+  paymentTerms         PaymentTerm[]
+  receivables          Receivable[]
+  receivableAdjustments ReceivableAdjustment[]
+  payments             Payment[]
+  paymentAllocations   PaymentAllocation[]
+  customerCredits      CustomerCredit[]
+  collectionActivities CollectionActivity[]
+  followUpTasks        FollowUpTask[]
+  notifications        Notification[]
+  auditEvents          AuditEvent[]
+  invitations          Invitation[]
+  pdfExports           PdfExport[]
+
+  @@index([status])
+}
+
+model BusinessMembership {
+  id         String           @id @default(uuid())
+  businessId String
+  userId     String
+  role       UserRole
+  status     MembershipStatus @default(ACTIVE)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, userId])
+  @@index([businessId])
+  @@index([userId])
+}
+
+// ==============================================================================
+// Customers
+// ==============================================================================
+
+model Customer {
+  id           String         @id @default(uuid())
+  businessId   String
+  customerCode String
+  name         String
+  phone        String
+  address      String?
+  notes        String?
+  creditLimit  Decimal?       @db.Decimal(19, 4)
+  status       CustomerStatus @default(ACTIVE)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  business             Business             @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  contacts             CustomerContact[]
+  receivables          Receivable[]
+  payments             Payment[]
+  customerCredits      CustomerCredit[]
+  collectionActivities CollectionActivity[]
+  followUpTasks        FollowUpTask[]
+
+  @@unique([businessId, customerCode])
+  @@index([businessId])
+  @@index([businessId, phone])
+  @@index([businessId, name])
+}
+
+model CustomerContact {
+  id         String   @id @default(uuid())
+  businessId String
+  customerId String
+  name       String
+  phone      String
+  email      String?
+  role       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([businessId])
+}
+
+// ==============================================================================
+// Payment Terms
+// ==============================================================================
+
+model PaymentTerm {
+  id          String   @id @default(uuid())
+  businessId  String
+  name        String
+  code        String
+  days        Int
+  description String?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, code])
+  @@index([businessId])
+}
+
+// ==============================================================================
+// Receivables
+// ==============================================================================
+
+model Receivable {
+  id                   String               @id @default(uuid())
+  businessId           String
+  customerId           String
+  referenceNumber      String
+  status               ReceivableStatus     @default(DRAFT)
+  currency             String               @default("RWF")
+  originalAmount       Decimal              @db.Decimal(19, 4)
+  adjustedAmount       Decimal              @default(0) @db.Decimal(19, 4)
+  paidAmount           Decimal              @default(0) @db.Decimal(19, 4)
+  outstandingBalance   Decimal              @db.Decimal(19, 4)
+  activatedAt          DateTime?
+  dueDate              DateTime?
+  sourceType           ReceivableSourceType @default(MANUAL)
+  sourceReference      String?
+  paymentTermsSnapshot Json?
+  customerSnapshot     Json?
+  cancellationReason   String?
+  cancelledAt          DateTime?
+  cancelledById        String?
+  createdById          String
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  business             Business               @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer             Customer               @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  createdBy            User                   @relation("ReceivableCreatedBy", fields: [createdById], references: [id])
+  cancelledBy          User?                  @relation("ReceivableCancelledBy", fields: [cancelledById], references: [id])
+  items                ReceivableItem[]
+  adjustments          ReceivableAdjustment[]
+  allocations          PaymentAllocation[]
+  collectionActivities CollectionActivity[]
+  followUpTasks        FollowUpTask[]
+
+  @@unique([businessId, referenceNumber])
+  @@index([businessId])
+  @@index([businessId, customerId])
+  @@index([businessId, status])
+  @@index([businessId, dueDate])
+}
+
+model ReceivableItem {
+  id           String     @id @default(uuid())
+  receivableId String
+  description  String
+  quantity     Decimal    @default(1) @db.Decimal(19, 4)
+  unitPrice    Decimal    @db.Decimal(19, 4)
+  totalAmount  Decimal    @db.Decimal(19, 4)
+  createdAt    DateTime   @default(now())
+
+  receivable Receivable @relation(fields: [receivableId], references: [id], onDelete: Cascade)
+
+  @@index([receivableId])
+}
+
+model ReceivableAdjustment {
+  id           String         @id @default(uuid())
+  businessId   String
+  receivableId String
+  type         AdjustmentType
+  amount       Decimal        @db.Decimal(19, 4)
+  reason       String
+  createdById  String
+  approvedById String?
+  createdAt    DateTime       @default(now())
+
+  business   Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  receivable Receivable @relation(fields: [receivableId], references: [id], onDelete: Cascade)
+  createdBy  User       @relation("AdjustmentCreatedBy", fields: [createdById], references: [id])
+  approvedBy User?      @relation("AdjustmentApprovedBy", fields: [approvedById], references: [id])
+
+  @@index([businessId])
+  @@index([receivableId])
+}
+
+// ==============================================================================
+// Payments & Allocations
+// ==============================================================================
+
+model Payment {
+  id                 String        @id @default(uuid())
+  businessId         String
+  customerId         String
+  referenceNumber    String
+  amount             Decimal       @db.Decimal(19, 4)
+  unallocatedAmount  Decimal       @db.Decimal(19, 4)
+  currency           String        @default("RWF")
+  paymentDate        DateTime
+  paymentMethod      PaymentMethod @default(CASH)
+  reference          String?
+  notes              String?
+  status             PaymentStatus @default(COMPLETED)
+  reversalReason     String?
+  reversedAt         DateTime?
+  customerSnapshot   Json?
+  createdById        String
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  business    Business            @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer    Customer            @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  createdBy   User                @relation("PaymentCreatedBy", fields: [createdById], references: [id])
+  allocations PaymentAllocation[]
+
+  @@unique([businessId, referenceNumber])
+  @@index([businessId])
+  @@index([businessId, customerId])
+  @@index([businessId, paymentDate])
+}
+
+model PaymentAllocation {
+  id           String   @id @default(uuid())
+  businessId   String
+  paymentId    String
+  receivableId String
+  amount       Decimal  @db.Decimal(19, 4)
+  createdById  String
+  createdAt    DateTime @default(now())
+
+  business   Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  payment    Payment    @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  receivable Receivable @relation(fields: [receivableId], references: [id], onDelete: Cascade)
+  createdBy  User       @relation("AllocationCreatedBy", fields: [createdById], references: [id])
+
+  @@index([businessId])
+  @@index([paymentId])
+  @@index([receivableId])
+}
+
+model CustomerCredit {
+  id              String   @id @default(uuid())
+  businessId      String
+  customerId      String
+  amount          Decimal  @db.Decimal(19, 4)
+  currency        String   @default("RWF")
+  sourcePaymentId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([businessId, customerId])
+}
+
+// ==============================================================================
+// Collections & Follow-ups
+// ==============================================================================
+
+model CollectionActivity {
+  id               String                 @id @default(uuid())
+  businessId       String
+  customerId       String
+  receivableId     String?
+  type             CollectionActivityType @default(PHONE_CALL)
+  outcome          CollectionOutcome
+  notes            String
+  promisedDate     DateTime?
+  promisedAmount   Decimal?               @db.Decimal(19, 4)
+  nextFollowUpDate DateTime?
+  createdById      String
+  createdAt        DateTime               @default(now())
+
+  business   Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer   Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  receivable Receivable? @relation(fields: [receivableId], references: [id], onDelete: SetNull)
+  createdBy  User        @relation("CollectionActivityCreatedBy", fields: [createdById], references: [id])
+
+  @@index([businessId])
+  @@index([businessId, customerId])
+  @@index([businessId, receivableId])
+}
+
+model FollowUpTask {
+  id           String         @id @default(uuid())
+  businessId   String
+  customerId   String
+  receivableId String?
+  dueDate      DateTime
+  status       FollowUpStatus @default(PENDING)
+  assignedToId String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  business   Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer   Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  receivable Receivable? @relation(fields: [receivableId], references: [id], onDelete: SetNull)
+
+  @@index([businessId])
+  @@index([businessId, dueDate])
+  @@index([businessId, status])
+}
+
+// ==============================================================================
+// Audit, Invitations & Platform Logs
+// ==============================================================================
+
+model AuditEvent {
+  id          String   @id @default(uuid())
+  businessId  String
+  actorUserId String?
+  actorRole   String?
+  action      String
+  entityType  String
+  entityId    String
+  beforeData  Json?
+  afterData   Json?
+  reason      String?
+  requestId   String?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  actor    User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([businessId])
+  @@index([businessId, entityType, entityId])
+  @@index([businessId, action])
+  @@index([requestId])
+}
+
+model Invitation {
+  id          String   @id @default(uuid())
+  businessId  String
+  phone       String
+  role        UserRole
+  tokenHash   String   @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  business  Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdBy User     @relation("InvitationCreatedBy", fields: [createdById], references: [id])
+
+  @@index([businessId])
+  @@index([tokenHash])
+}
+
+model Notification {
+  id         String    @id @default(uuid())
+  businessId String
+  userId     String
+  type       String
+  title      String
+  message    String
+  data       Json?
+  isRead     Boolean   @default(false)
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, userId])
+  @@index([userId, isRead])
+}
+
+model PdfExport {
+  id            String   @id @default(uuid())
+  businessId    String
+  exportType    String
+  entityId      String?
+  filters       Json?
+  fileName      String
+  fileUrl       String?
+  requestedById String
+  createdAt     DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+}
+
+model ApiRequestLog {
+  id            String   @id @default(uuid())
+  requestId     String   @unique
+  httpMethod    String
+  route         String
+  businessId    String?
+  userId        String?
+  ipAddress     String?
+  userAgent     String?
+  statusCode    Int
+  latencyMs     Int
+  requestSize   Int?
+  responseSize  Int?
+  errorMetadata Json?
+  createdAt     DateTime @default(now())
+
+  @@index([requestId])
+  @@index([businessId])
+  @@index([createdAt])
+  @@index([statusCode])
+}
