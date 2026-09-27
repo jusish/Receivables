@@ -7,7 +7,7 @@ COPY packages/ ./packages/
 COPY apps/admin/ ./apps/admin/
 
 RUN pnpm install --frozen-lockfile
-RUN pnpm --filter @receivables/admin build
+RUN pnpm turbo run build --filter=@receivables/admin...
 
 FROM nginx:1.27-alpine AS runner
 COPY --from=builder /app/apps/admin/dist /usr/share/nginx/html

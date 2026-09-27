@@ -9,7 +9,8 @@ COPY packages/ ./packages/
 COPY apps/api/ ./apps/api/
 
 RUN pnpm install --frozen-lockfile
-RUN pnpm --filter @receivables/api build
+RUN pnpm --filter @receivables/api prisma:generate
+RUN pnpm turbo run build --filter=@receivables/api...
 
 FROM node:22-alpine AS runner
 WORKDIR /app

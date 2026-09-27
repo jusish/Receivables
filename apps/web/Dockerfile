@@ -7,7 +7,7 @@ COPY packages/ ./packages/
 COPY apps/web/ ./apps/web/
 
 RUN pnpm install --frozen-lockfile
-RUN pnpm --filter @receivables/web build
+RUN pnpm turbo run build --filter=@receivables/web...
 
 FROM nginx:1.27-alpine AS runner
 COPY --from=builder /app/apps/web/dist /usr/share/nginx/html
