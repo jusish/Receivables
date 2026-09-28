@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="adminBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#020617" />
+      <stop offset="100%" stop-color="#0F172A" />
+    </linearGradient>
+    <linearGradient id="adminPrimaryGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#4F46E5" />
+      <stop offset="50%" stop-color="#6366F1" />
+      <stop offset="100%" stop-color="#10B981" />
+    </linearGradient>
+    <linearGradient id="adminAccentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#34D399" />
+    </linearGradient>
+  </defs>
+
+  <!-- Container Base with Rounded Squircle -->
+  <rect width="64" height="64" rx="16" fill="url(#adminBgGrad)" stroke="#1E293B" stroke-width="1.5" />
+
+  <!-- Flow Loop Path -->
+  <path
+    d="M18 40 C12 36, 12 26, 19 21 C26 16, 34 22, 38 27 L46 36 C50 41, 56 41, 58 37 C60 33, 58 26, 52 24"
+    stroke="url(#adminPrimaryGrad)"
+    stroke-width="5.5"
+    stroke-linecap="round"
+  />
+
+  <!-- Upward Collection Arrow -->
+  <path
+    d="M32 46 L47 22 M47 22 L38 21 M47 22 L48 30"
+    stroke="url(#adminAccentGrad)"
+    stroke-width="5.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Shield / Security Dot -->
+  <circle cx="27" cy="32" r="2.5" fill="#818CF8" />
+  <rect x="23" y="36" width="13" height="2.5" rx="1.25" fill="#34D399" opacity="0.9" />
+</svg>

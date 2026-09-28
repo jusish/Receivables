@@ -146,6 +146,7 @@ model Business {
   timezone  String         @default("Africa/Kigali")
   locale    String         @default("en-RW")
   status    BusinessStatus @default(ACTIVE)
+  settings  Json?
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 

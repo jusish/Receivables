@@ -4,7 +4,17 @@ import { LoggerModule } from 'nestjs-pino';
 import { DatabaseModule } from './common/database/database.module';
 import { RedisModule } from './common/redis/redis.module';
 import { HealthModule } from './modules/health/health.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { CustomersModule } from './modules/customers/customers.module';
+import { ReceivablesModule } from './modules/receivables/receivables.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+import { CollectionsModule } from './modules/collections/collections.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { ReportsModule } from './modules/reports/reports.module';
+import { BusinessModule } from './modules/business/business.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
+import { RequestLoggingMiddleware } from './common/middleware/request-logging.middleware';
 
 @Module({
   imports: [
@@ -41,10 +51,19 @@ import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
     DatabaseModule,
     RedisModule,
     HealthModule,
+    AuthModule,
+    CustomersModule,
+    ReceivablesModule,
+    PaymentsModule,
+    CollectionsModule,
+    DashboardModule,
+    ReportsModule,
+    BusinessModule,
+    AdminModule,
   ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(RequestIdMiddleware).forRoutes('*');
+    consumer.apply(RequestIdMiddleware, RequestLoggingMiddleware).forRoutes('*');
   }
 }

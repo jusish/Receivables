@@ -6,3 +6,7 @@ export * from './components/ui/input';
 export * from './components/ui/separator';
 export * from './components/ui/table';
 export * from './components/ui/tabs';
+export * from './components/ui/dialog';
+export * from './components/ui/searchable-select';
+export * from './components/ui/pagination';
+export * from './components/ui/brand-logo';

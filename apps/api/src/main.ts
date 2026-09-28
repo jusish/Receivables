@@ -23,6 +23,10 @@ async function bootstrap() {
     credentials: true,
   });
 
+  app.setGlobalPrefix('api/v1', {
+    exclude: ['health', 'health/live', 'health/ready'],
+  });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -40,7 +44,15 @@ async function bootstrap() {
       'Multi-tenant Customer Accounts Receivable and Collections Management Platform API',
     )
     .setVersion('1.0.0')
+    .addTag('Authentication')
     .addTag('Receivables')
+    .addTag('Customers')
+    .addTag('Payments')
+    .addTag('Collections')
+    .addTag('Dashboard')
+    .addTag('Reports')
+    .addTag('Business Settings')
+    .addTag('Admin Console')
     .addTag('Health')
     .addBearerAuth()
     .build();
