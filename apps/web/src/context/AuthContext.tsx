@@ -137,9 +137,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           adminRole: data.adminRole,
         }),
       );
-    } catch (err) {
-      console.warn('Failed to verify token, clearing session:', err);
-      logout();
+    } catch (err: any) {
+      console.warn('Failed to verify token:', err);
+      // On mobile browsers, momentary offline or lock/sleep state must not destroy an active session
+      if (err?.message?.includes('401') || err?.message?.toLowerCase().includes('unauthorized')) {
+        logout();
+      }
     } finally {
       setIsLoading(false);
     }
@@ -147,6 +150,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     refreshUser();
+
+    // Mobile web session handler: re-verify session when mobile device unlocks or tab becomes visible
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && localStorage.getItem('token')) {
+        refreshUser();
+      }
+    };
+    window.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleVisibility);
+    return () => {
+      window.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleVisibility);
+    };
   }, [token]);
 
   const login = async (phone: string, password: string) => {

@@ -213,10 +213,11 @@ export const AdminDashboardPage: React.FC = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="relative pt-2">
+                <div className="relative pt-2 overflow-hidden">
                   <svg
                     viewBox={`0 0 ${chartW} ${chartH}`}
-                    className="w-full h-40 overflow-visible"
+                    preserveAspectRatio="xMidYMid meet"
+                    className="w-full h-40"
                   >
                     <defs>
                       <linearGradient id="adminThroughputArea" x1="0" y1="0" x2="0" y2="1">

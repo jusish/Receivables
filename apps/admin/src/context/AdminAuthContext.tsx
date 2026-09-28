@@ -53,9 +53,11 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           adminRole: data.adminRole,
         })
       );
-    } catch (err) {
-      console.warn('Failed to verify admin token, logging out:', err);
-      logout();
+    } catch (err: any) {
+      console.warn('Failed to verify admin token:', err);
+      if (err?.message?.includes('401') || err?.message?.toLowerCase().includes('unauthorized')) {
+        logout();
+      }
     } finally {
       setIsLoading(false);
     }
@@ -63,6 +65,18 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   useEffect(() => {
     refreshUser();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && localStorage.getItem('admin_token')) {
+        refreshUser();
+      }
+    };
+    window.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleVisibility);
+    return () => {
+      window.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleVisibility);
+    };
   }, [token]);
 
   const login = async (phone: string, password: string) => {

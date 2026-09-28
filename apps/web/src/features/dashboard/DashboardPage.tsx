@@ -341,10 +341,11 @@ export const DashboardPage: React.FC = () => {
                 No billing history recorded yet for this workspace.
               </div>
             ) : (
-              <div className="relative pt-2">
+              <div className="relative pt-2 overflow-hidden">
                 <svg
                   viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-                  className="w-full h-44 overflow-visible"
+                  preserveAspectRatio="xMidYMid meet"
+                  className="w-full h-44"
                 >
                   <defs>
                     <linearGradient id="collectedArea" x1="0" y1="0" x2="0" y2="1">
